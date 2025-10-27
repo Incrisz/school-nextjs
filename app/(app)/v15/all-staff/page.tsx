@@ -19,7 +19,7 @@ const initialFilter: FilterState = {
   role: "",
 };
 
-const availableRoles = ["Teacher", "Accountant", "Administrator"];
+const availableRoles = ["Teacher", "Accountant", "Administrator", "Counselor", "Support"];
 
 export default function AllStaffPage() {
   const [filters, setFilters] = useState<FilterState>(initialFilter);
@@ -133,6 +133,10 @@ export default function AllStaffPage() {
               <h3>All Staff</h3>
             </div>
             <div className="dropdown">
+              <Link href="/v15/add-staff" className="btn btn-outline-primary mr-3">
+                <i className="fas fa-user-plus mr-1" />
+                Add Staff
+              </Link>
               <a
                 className="dropdown-toggle"
                 href="#"

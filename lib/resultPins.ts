@@ -84,6 +84,18 @@ export async function listResultPins(
   return normalizePins(payload);
 }
 
+export type StudentResultPinFilters = Omit<ResultPinFilters, "student_id">;
+
+export async function listStudentResultPins(
+  studentId: number | string,
+  filters: StudentResultPinFilters,
+): Promise<ResultPin[]> {
+  return listResultPins({
+    ...filters,
+    student_id: studentId,
+  });
+}
+
 export interface GenerateStudentPinPayload {
   session_id: string | number;
   term_id: string | number;

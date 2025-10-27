@@ -82,6 +82,20 @@ const genders = [
   { value: "female", label: "Female" },
 ];
 
+const normalizeGenderValue = (value?: string | null): string => {
+  if (!value) {
+    return "";
+  }
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "male" || normalized === "m") {
+    return "male";
+  }
+  if (normalized === "female" || normalized === "f") {
+    return "female";
+  }
+  return normalized;
+};
+
 const dateToInputValue = (value?: string | null): string => {
   if (!value) {
     return "";
@@ -199,7 +213,7 @@ export default function EditStudentPage() {
           first_name: detail.first_name ?? "",
           middle_name: detail.middle_name ?? "",
           last_name: detail.last_name ?? "",
-          gender: detail.gender ?? "",
+          gender: normalizeGenderValue(detail.gender),
           date_of_birth: dateToInputValue(detail.date_of_birth),
           admission_date: dateToInputValue(detail.admission_date),
           house: `${detail.house ?? ""}`,
@@ -344,17 +358,25 @@ export default function EditStudentPage() {
     listStates(effectiveCountryId)
       .then((data) => {
         setStates(data);
-        if (
-          !data.find(
-            (state) =>
-              `${state.id}` === stateId ||
-              (state.name ?? "").toLowerCase() === stateId.toLowerCase(),
-          )
-        ) {
-          setStateId("");
-          setLgas([]);
-          setLgaValue("");
+        if (!stateId) {
+          return;
         }
+        const match = data.find((state) => {
+          const id = `${state.id}`;
+          const name = (state.name ?? "").toLowerCase();
+          const target = stateId.toLowerCase();
+          return id === stateId || name === target;
+        });
+        if (match) {
+          const normalizedId = `${match.id}`;
+          if (normalizedId !== stateId) {
+            setStateId(normalizedId);
+          }
+          return;
+        }
+        setStateId("");
+        setLgas([]);
+        setLgaValue("");
       })
       .catch((err) => console.error("Unable to load states", err));
   }, [countryId, countries, stateId]);
@@ -378,15 +400,26 @@ export default function EditStudentPage() {
     listLgas(effectiveStateId)
       .then((data) => {
         setLgas(data);
-        if (
-          !data.find(
-            (lga) =>
-              `${lga.id}` === lgaValue ||
-              (lga.name ?? "").toLowerCase() === lgaValue.toLowerCase(),
-          )
-        ) {
-          setLgaValue("");
+        if (!lgaValue) {
+          return;
         }
+        const target = lgaValue.toLowerCase();
+        const match = data.find((lga) => {
+          const id = lga.id != null ? `${lga.id}` : null;
+          const name = (lga.name ?? "").toLowerCase();
+          return id === lgaValue || name === target;
+        });
+        if (match) {
+          const normalizedValue =
+            match.id != null
+              ? `${match.id}`
+              : (match.name ?? "").trim();
+          if (normalizedValue && normalizedValue !== lgaValue) {
+            setLgaValue(normalizedValue);
+          }
+          return;
+        }
+        setLgaValue("");
       })
       .catch((err) => console.error("Unable to load LGAs", err));
   }, [stateId, states, lgaValue]);
@@ -701,7 +734,10 @@ export default function EditStudentPage() {
                 >
                   <option value="">Please Select LGA *</option>
                   {lgas.map((lga) => (
-                    <option key={lga.id ?? lga.name} value={lga.name ?? lga.id}>
+                    <option
+                      key={`${lga.id ?? lga.name}`}
+                      value={lga.id != null ? `${lga.id}` : lga.name ?? ""}
+                    >
                       {lga.name}
                     </option>
                   ))}

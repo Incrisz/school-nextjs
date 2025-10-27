@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image, { type ImageLoader } from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   deleteStudent,
@@ -10,6 +10,28 @@ import {
   type StudentDetail,
 } from "@/lib/students";
 import { resolveBackendUrl } from "@/lib/config";
+import { listSessions, type Session } from "@/lib/sessions";
+import { listTermsBySession, type Term } from "@/lib/terms";
+import {
+  listStudentSkillRatings,
+  listStudentSkillTypes,
+  createStudentSkillRating,
+  updateStudentSkillRating,
+  deleteStudentSkillRating,
+  type StudentSkillRating,
+  type StudentSkillType,
+} from "@/lib/studentSkillRatings";
+import {
+  getStudentTermSummary,
+  updateStudentTermSummary,
+  type StudentTermSummary,
+} from "@/lib/studentTermSummaries";
+import {
+  listStudentResultPins,
+  generateResultPinForStudent,
+  invalidateResultPin,
+  type ResultPin,
+} from "@/lib/resultPins";
 
 const passthroughLoader: ImageLoader = ({ src }) => src;
 
@@ -22,6 +44,42 @@ export default function StudentDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [termsCache, setTermsCache] = useState<Record<string, Term[]>>({});
+  const [selectedSession, setSelectedSession] = useState<string>("");
+  const [selectedTerm, setSelectedTerm] = useState<string>("");
+
+  const [skillTypes, setSkillTypes] = useState<StudentSkillType[]>([]);
+  const [skillRatings, setSkillRatings] = useState<StudentSkillRating[]>([]);
+  const [skillLoading, setSkillLoading] = useState(false);
+  const [skillFeedback, setSkillFeedback] = useState<string | null>(null);
+  const [skillError, setSkillError] = useState<string | null>(null);
+  const [skillSubmitting, setSkillSubmitting] = useState(false);
+  const [skillForm, setSkillForm] = useState<{
+    id: string | null;
+    skill_type_id: string;
+    rating_value: string;
+  }>({
+    id: null,
+    skill_type_id: "",
+    rating_value: "3",
+  });
+
+  const [termSummary, setTermSummary] = useState<StudentTermSummary>({
+    class_teacher_comment: "",
+    principal_comment: "",
+  });
+  const [termSummaryFeedback, setTermSummaryFeedback] = useState<string | null>(null);
+  const [termSummarySaving, setTermSummarySaving] = useState(false);
+
+  const [pins, setPins] = useState<ResultPin[]>([]);
+  const [pinLoading, setPinLoading] = useState(false);
+  const [pinFeedback, setPinFeedback] = useState<string | null>(null);
+  const [pinError, setPinError] = useState<string | null>(null);
+  const [pinExpiresAt, setPinExpiresAt] = useState("");
+  const [pinProcessing, setPinProcessing] = useState(false);
+
+  const ratingOptions = ["1", "2", "3", "4", "5"];
 
   useEffect(() => {
     if (!studentId) {
@@ -44,6 +102,157 @@ export default function StudentDetailsPage() {
       })
       .finally(() => setLoading(false));
   }, [studentId, router]);
+
+  useEffect(() => {
+    if (!student?.id) {
+      return;
+    }
+    listStudentSkillTypes(student.id)
+      .then(setSkillTypes)
+      .catch((err) => console.error("Unable to load skill types", err));
+  }, [student?.id]);
+
+  useEffect(() => {
+    if (!student) {
+      return;
+    }
+    setSelectedSession((prev) => {
+      if (prev) {
+        return prev;
+      }
+      if (student.current_session_id) {
+        return String(student.current_session_id);
+      }
+      return "";
+    });
+    setSelectedTerm((prev) => {
+      if (prev) {
+        return prev;
+      }
+      if (student.current_term_id) {
+        return String(student.current_term_id);
+      }
+      return "";
+    });
+  }, [student]);
+
+  useEffect(() => {
+    listSessions()
+      .then(setSessions)
+      .catch((err) => console.error("Unable to load sessions", err));
+  }, []);
+
+  useEffect(() => {
+    if (!selectedSession) {
+      return;
+    }
+    if (termsCache[selectedSession]) {
+      return;
+    }
+    listTermsBySession(selectedSession)
+      .then((terms) => {
+        setTermsCache((prev) => ({
+          ...prev,
+          [selectedSession]: terms,
+        }));
+      })
+      .catch((err) => console.error("Unable to load terms", err));
+  }, [selectedSession, termsCache]);
+
+  useEffect(() => {
+    if (!selectedSession) {
+      return;
+    }
+    const terms = termsCache[selectedSession];
+    if (!terms || terms.length === 0) {
+      setSelectedTerm("");
+      return;
+    }
+    if (!selectedTerm || !terms.find((term) => String(term.id) === selectedTerm)) {
+      setSelectedTerm(String(terms[0].id));
+    }
+  }, [selectedSession, selectedTerm, termsCache]);
+
+  useEffect(() => {
+    if (!student?.id || !selectedSession || !selectedTerm) {
+      setSkillRatings([]);
+      return;
+    }
+    setSkillLoading(true);
+    setSkillError(null);
+    listStudentSkillRatings(student.id, {
+      session_id: selectedSession,
+      term_id: selectedTerm,
+    })
+      .then((ratings) => {
+        setSkillRatings(ratings);
+        setSkillFeedback(null);
+      })
+      .catch((err) => {
+        console.error("Unable to load skill ratings", err);
+        setSkillError(
+          err instanceof Error
+            ? err.message
+            : "Unable to load skill ratings.",
+        );
+        setSkillRatings([]);
+      })
+      .finally(() => setSkillLoading(false));
+  }, [student?.id, selectedSession, selectedTerm]);
+
+  useEffect(() => {
+    if (!student?.id || !selectedSession || !selectedTerm) {
+      setTermSummary({
+        class_teacher_comment: "",
+        principal_comment: "",
+      });
+      return;
+    }
+    getStudentTermSummary(student.id, {
+      session_id: selectedSession,
+      term_id: selectedTerm,
+    })
+      .then((summary: StudentTermSummary) => {
+        setTermSummary({
+          class_teacher_comment: summary.class_teacher_comment ?? "",
+          principal_comment: summary.principal_comment ?? "",
+        });
+      })
+      .catch((err: unknown) => {
+        console.error("Unable to load term comments", err);
+        setTermSummary({
+          class_teacher_comment: "",
+          principal_comment: "",
+        });
+      });
+  }, [student?.id, selectedSession, selectedTerm]);
+
+  useEffect(() => {
+    if (!student?.id || !selectedSession || !selectedTerm) {
+      setPins([]);
+      return;
+    }
+    setPinLoading(true);
+    setPinError(null);
+    listStudentResultPins(student.id, {
+      session_id: selectedSession,
+      term_id: selectedTerm,
+    })
+      .then((result) => {
+        setPins(result);
+        setPinFeedback(null);
+      })
+      .catch((err: unknown) => {
+        console.error("Unable to load result PINs", err);
+        setPinError(
+          err instanceof Error
+            ? err.message
+            : "Unable to load result PINs for the selected term.",
+        );
+        setPins([]);
+      })
+      .finally(() => setPinLoading(false));
+  }, [student?.id, selectedSession, selectedTerm]);
 
   const fullName = useMemo(() => {
     if (!student) return "";

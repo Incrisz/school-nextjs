@@ -1,1 +1,1 @@
-const backend_url = 'https://api.lynxglobal.com.ng';
+const backend_url = 'http://localhost:8000';
