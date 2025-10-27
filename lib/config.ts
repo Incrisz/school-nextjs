@@ -28,4 +28,7 @@ export const API_ROUTES = {
   currentUser: "/api/v1/user",
   schoolContext: "/api/v1/school",
   classes: "/api/v1/classes",
+  parents: "/api/v1/parents",
+  parentsSearch: "/api/v1/parents",
+  parentsIndex: "/api/v1/all-parents",
 } as const;
