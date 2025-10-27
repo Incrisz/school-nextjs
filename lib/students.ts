@@ -44,6 +44,8 @@ export interface StudentFilters {
   sortBy?: string;
   sortDirection?: "asc" | "desc";
   search?: string;
+  session_id?: string;
+  term_id?: string;
   current_session_id?: string;
   school_class_id?: string;
   class_arm_id?: string;
@@ -70,6 +72,8 @@ export async function listStudents(
     sortBy: filters.sortBy,
     sortDirection: filters.sortDirection,
     search: filters.search,
+    session_id: filters.session_id,
+    term_id: filters.term_id,
     current_session_id: filters.current_session_id,
     school_class_id: filters.school_class_id,
     class_arm_id: filters.class_arm_id,

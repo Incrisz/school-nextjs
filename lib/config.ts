@@ -36,4 +36,7 @@ export const API_ROUTES = {
   subjectAssignments: "/api/v1/settings/subject-assignments",
   subjectTeacherAssignments: "/api/v1/settings/subject-teacher-assignments",
   classTeachers: "/api/v1/settings/class-teachers",
+  promotionsBulk: "/api/v1/promotions/bulk",
+  promotionsHistory: "/api/v1/promotions/history",
+  sessionsRollover: "/api/v1/sessions/rollover",
 } as const;
