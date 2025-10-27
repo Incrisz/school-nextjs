@@ -140,15 +140,17 @@ export function Sidebar() {
   const isSectionActive = (section: MenuSection) =>
     section.links.some((link) => isLinkActive(link.href));
 
-  const toggleSection = useCallback(
-    (label: string) => {
-      setOpenSections((prev) => ({
-        ...prev,
-        [label]: !prev[label],
-      }));
-    },
-    [],
-  );
+  const toggleSection = useCallback((label: string) => {
+    setOpenSections((prev) => {
+      const isCurrentlyOpen = prev[label] ?? false;
+      if (isCurrentlyOpen) {
+        const next = { ...prev };
+        delete next[label];
+        return next;
+      }
+      return { [label]: true };
+    });
+  }, []);
 
   return (
     <div
@@ -194,7 +196,9 @@ export function Sidebar() {
             return (
               <li
                 key={section.label}
-                className={`nav-item sidebar-nav-item ${open ? "open" : ""}`}
+                className={`nav-item sidebar-nav-item ${
+                  open ? "open active" : ""
+                }`}
               >
                 <a
                   href="#"

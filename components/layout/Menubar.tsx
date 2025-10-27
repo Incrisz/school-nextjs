@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import Image, { type ImageLoader } from "next/image";
-import { useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useMemo, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { resolveBackendUrl } from "@/lib/config";
 
@@ -14,6 +14,7 @@ const passthroughLoader: ImageLoader = ({ src }) => src;
 
 export function Menubar() {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, schoolContext, logout } = useAuth();
 
   const logoSrc = useMemo(() => {
@@ -47,6 +48,36 @@ export function Menubar() {
     router.push("/login");
   }, [logout, router]);
 
+  const toggleDesktopSidebar = useCallback(() => {
+    const wrapper = document.getElementById("wrapper");
+    if (!wrapper) {
+      return;
+    }
+    wrapper.classList.toggle("sidebar-collapsed");
+    if (wrapper.classList.contains("sidebar-collapsed-mobile")) {
+      wrapper.classList.remove("sidebar-collapsed-mobile");
+    }
+  }, []);
+
+  const toggleMobileSidebar = useCallback(() => {
+    const wrapper = document.getElementById("wrapper");
+    if (!wrapper) {
+      return;
+    }
+    wrapper.classList.toggle("sidebar-collapsed-mobile");
+    if (wrapper.classList.contains("sidebar-collapsed-mobile")) {
+      wrapper.classList.remove("sidebar-collapsed");
+    }
+  }, []);
+
+  useEffect(() => {
+    const wrapper = document.getElementById("wrapper");
+    if (!wrapper) {
+      return;
+    }
+    wrapper.classList.remove("sidebar-collapsed-mobile");
+  }, [pathname]);
+
   return (
     <div className="navbar navbar-expand-md header-menu-one bg-light">
       <div className="nav-bar-header-one">
@@ -65,7 +96,12 @@ export function Menubar() {
           </Link>
         </div>
         <div className="toggle-button sidebar-toggle">
-          <button type="button" className="item-link">
+          <button
+            type="button"
+            className="item-link"
+            onClick={toggleDesktopSidebar}
+            aria-label="Toggle sidebar"
+          >
             <span className="btn-icon-wrap">
               <span />
               <span />
@@ -84,7 +120,12 @@ export function Menubar() {
         >
           <i className="far fa-arrow-alt-circle-down" />
         </button>
-        <button type="button" className="navbar-toggler sidebar-toggle-mobile">
+        <button
+          type="button"
+          className="navbar-toggler sidebar-toggle-mobile"
+          onClick={toggleMobileSidebar}
+          aria-label="Toggle sidebar"
+        >
           <i className="fas fa-bars" />
         </button>
       </div>
