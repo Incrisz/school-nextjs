@@ -29,6 +29,7 @@ interface AuthState {
   login: (payload: LoginPayload) => Promise<void>;
   logout: () => Promise<void>;
   refreshSchoolContext: () => Promise<void>;
+  refreshAuth: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
@@ -90,6 +91,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSchoolContext(context);
   }, []);
 
+  const refreshAuth = useCallback(async () => {
+    await hydrate();
+  }, [hydrate]);
+
   const value = useMemo(
     () => ({
       user,
@@ -98,8 +103,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       login,
       logout,
       refreshSchoolContext,
+      refreshAuth,
     }),
-    [user, schoolContext, loading, login, logout, refreshSchoolContext],
+    [
+      user,
+      schoolContext,
+      loading,
+      login,
+      logout,
+      refreshSchoolContext,
+      refreshAuth,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

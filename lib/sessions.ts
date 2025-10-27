@@ -8,8 +8,26 @@ export interface Session {
   [key: string]: unknown;
 }
 
+type SessionsResponse =
+  | Session[]
+  | {
+      data?: Session[];
+      [key: string]: unknown;
+    };
+
+function normalizeSessions(payload: SessionsResponse): Session[] {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+  if (payload && Array.isArray(payload.data)) {
+    return payload.data;
+  }
+  return [];
+}
+
 export async function listSessions(): Promise<Session[]> {
-  return apiFetch<Session[]>("/api/v1/sessions");
+  const payload = await apiFetch<SessionsResponse>("/api/v1/sessions");
+  return normalizeSessions(payload);
 }
 
 export interface SessionPayload {

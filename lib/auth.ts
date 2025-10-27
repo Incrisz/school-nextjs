@@ -49,6 +49,14 @@ export interface AuthenticatedUserResponse {
   [key: string]: unknown;
 }
 
+export interface UpdateUserPayload {
+  name?: string;
+  email?: string;
+  old_password?: string;
+  password?: string;
+  password_confirmation?: string;
+}
+
 export async function login(payload: LoginPayload): Promise<LoginResponse> {
   const response = await apiFetch<LoginResponse>(API_ROUTES.login, {
     method: "POST",
@@ -96,5 +104,31 @@ export async function getAuthenticatedUser(): Promise<User | null> {
   } catch (error) {
     console.error("Unable to fetch authenticated user", error);
     return null;
+  }
+}
+
+export async function updateUserProfile(
+  payload: UpdateUserPayload,
+): Promise<User | null> {
+  try {
+    const response = await apiFetch<User | AuthenticatedUserResponse>(
+      API_ROUTES.currentUser,
+      {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      },
+    );
+
+    if (response && typeof response === "object") {
+      if ("user" in response && (response as AuthenticatedUserResponse).user) {
+        return (response as AuthenticatedUserResponse).user ?? null;
+      }
+    }
+
+    return (response as User) ?? null;
+  } catch (error) {
+    throw error instanceof Error
+      ? error
+      : new Error("Unable to update user profile");
   }
 }

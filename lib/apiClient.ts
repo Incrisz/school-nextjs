@@ -11,8 +11,11 @@ export async function apiFetch<T = unknown>(
   const token = getCookie("token");
   const resolvedHeaders = new Headers(headers);
 
+  const isFormData =
+    typeof FormData !== "undefined" && rest.body instanceof FormData;
+
   resolvedHeaders.set("Accept", "application/json");
-  if (!resolvedHeaders.has("Content-Type") && rest.body) {
+  if (!resolvedHeaders.has("Content-Type") && rest.body && !isFormData) {
     resolvedHeaders.set("Content-Type", "application/json");
   }
 
