@@ -128,7 +128,7 @@ export default function LoginPage() {
           <Link href="/register">Create One now!</Link>
         </div>
         <div className="text-center mt-3 text-muted">
-          <small>Connecting to: {BACKEND_URL}</small>
+          {/* <small>Connecting to: {BACKEND_URL}</small> */}
         </div>
       </div>
     </div>
