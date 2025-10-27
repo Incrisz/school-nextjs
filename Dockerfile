@@ -12,7 +12,7 @@ RUN npm ci
 COPY . .
 ARG NEXT_PUBLIC_BACKEND_URL=https://api.lynxglobal.com.ng
 ENV NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL}
-RUN npm run build && npm prune --omit=dev
+RUN npm run build
 
 EXPOSE 3000
 CMD ["npm", "run", "start"]
