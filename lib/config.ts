@@ -27,4 +27,5 @@ export const API_ROUTES = {
   logout: "/api/v1/logout",
   currentUser: "/api/v1/user",
   schoolContext: "/api/v1/school",
+  classes: "/api/v1/classes",
 } as const;
