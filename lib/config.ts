@@ -39,4 +39,13 @@ export const API_ROUTES = {
   promotionsBulk: "/api/v1/promotions/bulk",
   promotionsHistory: "/api/v1/promotions/history",
   sessionsRollover: "/api/v1/sessions/rollover",
+  studentAttendance: "/api/v1/attendance/students",
+  staffAttendance: "/api/v1/attendance/staff",
+  gradeScales: "/api/v1/grades/scales",
+  skillCategories: "/api/v1/settings/skill-categories",
+  skillTypes: "/api/v1/settings/skill-types",
+  assessmentComponents: "/api/v1/settings/assessment-components",
+  results: "/api/v1/results",
+  resultBatch: "/api/v1/results/batch",
+  resultPins: "/api/v1/result-pins",
 } as const;
