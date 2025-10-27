@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image, { type ImageLoader } from "next/image";
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { resolveBackendUrl } from "@/lib/config";
@@ -122,6 +122,7 @@ const menuSections: MenuSection[] = [
 export function Sidebar() {
   const pathname = usePathname();
   const { schoolContext } = useAuth();
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
 
   const logoSrc = useMemo(() => {
     const customLogo = schoolContext.school?.logo_url;
@@ -138,6 +139,16 @@ export function Sidebar() {
 
   const isSectionActive = (section: MenuSection) =>
     section.links.some((link) => isLinkActive(link.href));
+
+  const toggleSection = useCallback(
+    (label: string) => {
+      setOpenSections((prev) => ({
+        ...prev,
+        [label]: !prev[label],
+      }));
+    },
+    [],
+  );
 
   return (
     <div
@@ -179,16 +190,27 @@ export function Sidebar() {
 
           {menuSections.map((section) => {
             const active = isSectionActive(section);
+            const open = openSections[section.label] ?? active;
             return (
               <li
                 key={section.label}
-                className={`nav-item sidebar-nav-item ${active ? "open" : ""}`}
+                className={`nav-item sidebar-nav-item ${open ? "open" : ""}`}
               >
-                <a href="#" className="nav-link">
+                <a
+                  href="#"
+                  className="nav-link"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    toggleSection(section.label);
+                  }}
+                >
                   <i className={section.icon} />
                   <span>{section.label}</span>
                 </a>
-                <ul className="nav sub-group-menu">
+                <ul
+                  className="nav sub-group-menu"
+                  style={{ display: open ? "block" : "none" }}
+                >
                   {section.links.map((link) => (
                     <li
                       key={link.href}

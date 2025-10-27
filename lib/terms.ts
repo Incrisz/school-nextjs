@@ -4,6 +4,7 @@ export interface Term {
   id: number;
   name: string;
   session?: number | string;
+  session_id?: number | string;
   start_date?: string | null;
   end_date?: string | null;
   [key: string]: unknown;
@@ -42,4 +43,45 @@ export async function getTerm(termId: number | string): Promise<Term | null> {
     console.error("Unable to load term", error);
     return null;
   }
+}
+
+export interface TermPayload {
+  name: string;
+  start_date: string;
+  end_date: string;
+}
+
+export async function createTerm(
+  sessionId: number | string,
+  payload: TermPayload,
+): Promise<Term> {
+  return apiFetch<Term>(`/api/v1/sessions/${sessionId}/terms`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export interface UpdateTermPayload extends TermPayload {
+  session: number | string;
+}
+
+export async function updateTerm(
+  termId: number | string,
+  payload: UpdateTermPayload,
+): Promise<Term> {
+  const body = {
+    ...payload,
+    slug: payload.name.toLowerCase().replace(/\s+/g, "-"),
+  };
+
+  return apiFetch<Term>(`/api/v1/terms/${termId}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteTerm(termId: number | string): Promise<void> {
+  await apiFetch(`/api/v1/terms/${termId}`, {
+    method: "DELETE",
+  });
 }
