@@ -32,4 +32,8 @@ export const API_ROUTES = {
   parentsSearch: "/api/v1/parents",
   parentsIndex: "/api/v1/all-parents",
   staff: "/api/v1/staff",
+  subjects: "/api/v1/settings/subjects",
+  subjectAssignments: "/api/v1/settings/subject-assignments",
+  subjectTeacherAssignments: "/api/v1/settings/subject-teacher-assignments",
+  classTeachers: "/api/v1/settings/class-teachers",
 } as const;

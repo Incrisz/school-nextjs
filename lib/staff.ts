@@ -79,6 +79,11 @@ export async function listStaff(
   return payload;
 }
 
+export async function listStaffForDropdown(): Promise<Staff[]> {
+  const payload = await listStaff({ per_page: 500 });
+  return payload.data ?? [];
+}
+
 export async function getStaff(staffId: number | string): Promise<Staff | null> {
   try {
     const payload = await apiFetch<{ data?: Staff } | Staff>(
