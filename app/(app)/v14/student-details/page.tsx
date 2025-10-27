@@ -119,6 +119,13 @@ export default function StudentDetailsPage() {
     );
   }
 
+  const houseLabel = student.house && `${student.house}`.trim().length > 0
+    ? `${student.house}`
+    : "N/A";
+  const clubLabel = student.club && `${student.club}`.trim().length > 0
+    ? `${student.club}`
+    : "N/A";
+
   const className = student.school_class?.name ?? "N/A";
   const armName =
     student.class_arm?.name ?? student.school_class?.class_arm?.name ?? "";
@@ -274,10 +281,10 @@ export default function StudentDetailsPage() {
                     <strong>Section:</strong> {sectionName}
                   </li>
                   <li>
-                    <strong>House:</strong> {student.house ?? "N/A"}
+                    <strong>House:</strong> {houseLabel}
                   </li>
                   <li>
-                    <strong>Club:</strong> {student.club ?? "N/A"}
+                    <strong>Club:</strong> {clubLabel}
                   </li>
                 </ul>
               </div>

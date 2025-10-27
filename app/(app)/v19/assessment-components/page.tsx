@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState, type ReactElement } from "react";
 import {
   createAssessmentComponent,
   deleteAssessmentComponent,
@@ -343,7 +343,7 @@ export default function AssessmentComponentsPage() {
       return null;
     }
 
-    const items: Array<JSX.Element> = [];
+    const items: ReactElement[] = [];
 
     const appendPage = (pageNumber: number, label?: string) => {
       const active = pageNumber === current;

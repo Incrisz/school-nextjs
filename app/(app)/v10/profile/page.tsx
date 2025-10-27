@@ -32,6 +32,19 @@ export default function SchoolProfilePage() {
 
   const passthroughLoader: ImageLoader = ({ src }) => src;
 
+  const adminRole =
+    user != null
+      ? (() => {
+          const directRole = (user as { role?: unknown }).role;
+          if (typeof directRole === "string" && directRole.trim().length > 0) {
+            return directRole.trim();
+          }
+          const roles = (user as { roles?: { name?: string | null }[] }).roles;
+          const derived = roles?.find((entry) => entry?.name)?.name?.trim();
+          return derived && derived.length > 0 ? derived : "N/A";
+        })()
+      : "N/A";
+
   if (loading && !school) {
     return (
       <div className="d-flex align-items-center justify-content-center flex-column min-vh-100">
@@ -254,10 +267,7 @@ export default function SchoolProfilePage() {
                             id="admin-role"
                             className="font-medium text-dark-medium"
                           >
-                            {user?.role ??
-                              (user as { roles?: { name?: string }[] })?.roles?.[0]
-                                ?.name ??
-                              "N/A"}
+                            {adminRole}
                           </td>
                         </tr>
                         <tr>

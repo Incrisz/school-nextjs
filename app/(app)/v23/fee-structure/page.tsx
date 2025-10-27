@@ -696,7 +696,7 @@ export default function FeeStructurePage() {
                     <tr key={item.id}>
                       <td>{item.name}</td>
                       <td>{item.category ?? "—"}</td>
-                      <td>{formatCurrency(item.default_amount)}</td>
+                      <td>{formatCurrency(item.default_amount ?? 0)}</td>
                       <td>
                         <span
                           className={`badge badge-${
@@ -993,7 +993,7 @@ export default function FeeStructurePage() {
                   <div className="card-header bg-primary text-white">
                     <h6 className="mb-0">
                       {structure.class?.name ?? "Class"} &mdash; Total:{" "}
-                      {formatCurrency(structure.total_amount)}
+                      {formatCurrency(structure.total_amount ?? 0)}
                     </h6>
                   </div>
                   <div className="card-body">
@@ -1012,7 +1012,7 @@ export default function FeeStructurePage() {
                             (structure.fee_items ?? []).map((item) => (
                               <tr key={item.id}>
                                 <td>{item.fee_item?.name ?? "—"}</td>
-                                <td>{formatCurrency(item.amount)}</td>
+                                <td>{formatCurrency(item.amount ?? 0)}</td>
                                 <td>
                                   <span
                                     className={`badge badge-${

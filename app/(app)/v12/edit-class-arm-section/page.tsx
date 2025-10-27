@@ -35,12 +35,16 @@ export default function EditClassArmSectionPage() {
       return;
     }
 
+    const classIdValue = String(classIdParam);
+    const armIdValue = String(armIdParam);
+    const sectionIdValue = String(sectionId);
+
     async function hydrate() {
       try {
         const [classList, armList, section] = await Promise.all([
           listClasses(),
-          listClassArms(classIdParam),
-          getClassArmSection(classIdParam, armIdParam, sectionId),
+          listClassArms(classIdValue),
+          getClassArmSection(classIdValue, armIdValue, sectionIdValue),
         ]);
 
         if (!section) {
@@ -48,9 +52,9 @@ export default function EditClassArmSectionPage() {
         }
 
         setClasses(classList);
-        setClassId(`${classIdParam}`);
+        setClassId(classIdValue);
         setArms(armList);
-        setArmId(`${armIdParam}`);
+        setArmId(armIdValue);
         setName(section.name ?? "");
         setError(null);
       } catch (err) {

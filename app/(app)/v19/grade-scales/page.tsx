@@ -81,8 +81,10 @@ function validateRanges(ranges: EditableRange[]): ValidationResult {
 
     const min = Number(minRaw);
     const max = Number(maxRaw);
-    const gradePoint =
-      gradePointRaw === "" ? null : Number.parseFloat(gradePointRaw);
+    const hasGradePoint = gradePointRaw !== "";
+    const gradePointParsed = hasGradePoint
+      ? Number.parseFloat(gradePointRaw)
+      : Number.NaN;
 
     const isInvalid =
       !label ||
@@ -95,8 +97,10 @@ function validateRanges(ranges: EditableRange[]): ValidationResult {
       min > 100 ||
       max > 100 ||
       min > max ||
-      (gradePointRaw !== "" &&
-        (Number.isNaN(gradePoint) || gradePoint < 0 || gradePoint > 10));
+      (hasGradePoint &&
+        (Number.isNaN(gradePointParsed) ||
+          gradePointParsed < 0 ||
+          gradePointParsed > 10));
 
     if (isInvalid) {
       invalidKeys.add(range.key);
@@ -109,7 +113,7 @@ function validateRanges(ranges: EditableRange[]): ValidationResult {
       min_score: min,
       max_score: max,
       description: description || null,
-      grade_point: gradePoint,
+      grade_point: hasGradePoint ? gradePointParsed : null,
       order_index: index,
     });
   });

@@ -24,6 +24,10 @@ export interface School {
   id: number;
   name: string;
   logo_url?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  signature_url?: string | null;
   current_session_id?: number | null;
   current_term_id?: number | null;
   current_session?: Session | null;

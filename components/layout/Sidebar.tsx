@@ -129,10 +129,13 @@ export function Sidebar() {
     return customLogo ? resolveBackendUrl(customLogo) : DEFAULT_LOGO;
   }, [schoolContext.school?.logo_url]);
 
-  const brandText =
-    schoolContext.school?.short_name ??
-    schoolContext.school?.name ??
-    "SMS";
+  const brandText = (() => {
+    const value = schoolContext.school?.short_name ?? schoolContext.school?.name;
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+    return "SMS";
+  })();
 
   const isLinkActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);

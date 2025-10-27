@@ -576,7 +576,11 @@ export default function StaffAttendancePage() {
                             ))}
                           </select>
                         </td>
-                        <td>{record?.updated_at ? formatDate(record.updated_at) : "—"}</td>
+                        <td>
+                          {record?.updated_at
+                            ? formatDate(String(record.updated_at))
+                            : "—"}
+                        </td>
                         <td>
                           <button
                             type="button"

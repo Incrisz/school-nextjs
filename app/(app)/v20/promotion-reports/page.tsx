@@ -258,19 +258,22 @@ export default function PromotionReportsPage() {
                     </td>
                   </tr>
                 ) : (
-                  rows.map((row, index) => (
-                    <tr key={`report-${row.id ?? index}`}>
-                      <td>
-                        {row.promoted_at || row.created_at
-                          ? new Date(row.promoted_at || row.created_at).toLocaleString()
-                          : "—"}
-                      </td>
-                      <td>{row.student_name ?? ""}</td>
-                      <td>{row.from_class ?? ""}</td>
-                      <td>{row.to_class ?? ""}</td>
-                      <td>{row.performed_by ?? ""}</td>
-                    </tr>
-                  ))
+                  rows.map((row, index) => {
+                    const timestamp = row.promoted_at ?? row.created_at ?? null;
+                    return (
+                      <tr key={`report-${row.id ?? index}`}>
+                        <td>
+                          {timestamp
+                            ? new Date(timestamp).toLocaleString()
+                            : "—"}
+                        </td>
+                        <td>{row.student_name ?? ""}</td>
+                        <td>{row.from_class ?? ""}</td>
+                        <td>{row.to_class ?? ""}</td>
+                        <td>{row.performed_by ?? ""}</td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

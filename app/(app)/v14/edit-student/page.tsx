@@ -186,9 +186,11 @@ export default function EditStudentPage() {
       return;
     }
 
+    const normalizedStudentId = String(studentId);
+
     async function hydrate() {
       try {
-        const detail = await getStudent(studentId);
+        const detail = await getStudent(normalizedStudentId);
         if (!detail) {
           throw new Error("Student not found.");
         }
@@ -200,10 +202,10 @@ export default function EditStudentPage() {
           gender: detail.gender ?? "",
           date_of_birth: dateToInputValue(detail.date_of_birth),
           admission_date: dateToInputValue(detail.admission_date),
-          house: detail.house ?? "",
-          club: detail.club ?? "",
+          house: `${detail.house ?? ""}`,
+          club: `${detail.club ?? ""}`,
           current_session_id: `${detail.current_session_id ?? detail.session?.id ?? ""}`,
-          current_term_id: `${detail.current_term_id ?? detail.term?.id ?? ""}`,
+          current_term_id: `${detail.current_term_id ?? (detail.term as { id?: string | number })?.id ?? ""}`,
           school_class_id: `${detail.school_class_id ?? detail.school_class?.id ?? ""}`,
           class_arm_id: `${detail.class_arm_id ?? detail.class_arm?.id ?? detail.school_class?.class_arm?.id ?? ""}`,
           class_section_id: `${detail.class_section_id ?? detail.class_section?.id ?? ""}`,

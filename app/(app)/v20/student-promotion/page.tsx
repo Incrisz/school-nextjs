@@ -66,6 +66,7 @@ export default function StudentPromotionPage() {
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "info" | "warning" | "danger"; message: string } | null>(null);
   const [promotionResult, setPromotionResult] = useState<PromotionResponse | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     listSessions()

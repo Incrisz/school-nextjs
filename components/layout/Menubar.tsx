@@ -36,11 +36,13 @@ export function Menubar() {
     if (!user) {
       return "Administrator";
     }
-    if (typeof (user as { role?: string }).role === "string") {
-      return (user as { role: string }).role;
+    const directRole = (user as { role?: unknown }).role;
+    if (typeof directRole === "string" && directRole.trim().length > 0) {
+      return directRole.trim();
     }
-    const roles = (user as { roles?: Array<{ name?: string }> }).roles;
-    return roles?.find((entry) => entry?.name)?.name ?? "Administrator";
+    const roles = (user as { roles?: Array<{ name?: string | null }> }).roles;
+    const derived = roles?.find((entry) => entry?.name)?.name?.trim();
+    return derived && derived.length > 0 ? derived : "Administrator";
   }, [user]);
 
   const handleLogout = useCallback(async () => {

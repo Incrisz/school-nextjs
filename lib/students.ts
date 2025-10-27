@@ -24,6 +24,7 @@ export interface StudentSummary {
     phone?: string | null;
   } | null;
   session?: StudentName | null;
+  term?: StudentName | null;
   [key: string]: unknown;
 }
 
@@ -47,6 +48,7 @@ export interface StudentFilters {
   session_id?: string;
   term_id?: string;
   current_session_id?: string;
+  current_term_id?: string;
   school_class_id?: string;
   class_arm_id?: string;
   class_section_id?: string;
@@ -100,6 +102,8 @@ export interface StudentDetail extends StudentSummary {
   nationality?: string | null;
   state_of_origin?: string | null;
   lga_of_origin?: string | null;
+  house?: string | null;
+  club?: string | null;
   blood_group_id?: number | string | null;
   blood_group?: StudentName | null;
   medical_information?: string | null;
