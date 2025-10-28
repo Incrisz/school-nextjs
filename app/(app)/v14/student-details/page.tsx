@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import Image, { type ImageLoader } from "next/image";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ChangeEvent,
+  FormEvent,
+  MouseEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   deleteStudent,
@@ -10,6 +18,7 @@ import {
   type StudentDetail,
 } from "@/lib/students";
 import { resolveBackendUrl } from "@/lib/config";
+import { getCookie } from "@/lib/cookies";
 import { listSessions, type Session } from "@/lib/sessions";
 import { listTermsBySession, type Term } from "@/lib/terms";
 import {
@@ -53,6 +62,7 @@ export default function StudentDetailsPage() {
   const [skillRatings, setSkillRatings] = useState<StudentSkillRating[]>([]);
   const [skillLoading, setSkillLoading] = useState(false);
   const [skillFeedback, setSkillFeedback] = useState<string | null>(null);
+  const [skillFeedbackType, setSkillFeedbackType] = useState<"success" | "warning">("success");
   const [skillError, setSkillError] = useState<string | null>(null);
   const [skillSubmitting, setSkillSubmitting] = useState(false);
   const [skillForm, setSkillForm] = useState<{
@@ -70,16 +80,528 @@ export default function StudentDetailsPage() {
     principal_comment: "",
   });
   const [termSummaryFeedback, setTermSummaryFeedback] = useState<string | null>(null);
+  const [termSummaryFeedbackType, setTermSummaryFeedbackType] =
+    useState<"success" | "warning" | "danger">("success");
   const [termSummarySaving, setTermSummarySaving] = useState(false);
 
   const [pins, setPins] = useState<ResultPin[]>([]);
   const [pinLoading, setPinLoading] = useState(false);
   const [pinFeedback, setPinFeedback] = useState<string | null>(null);
+  const [pinFeedbackType, setPinFeedbackType] = useState<"success" | "warning">("success");
   const [pinError, setPinError] = useState<string | null>(null);
-  const [pinExpiresAt, setPinExpiresAt] = useState("");
   const [pinProcessing, setPinProcessing] = useState(false);
+  const [printProcessing, setPrintProcessing] = useState(false);
 
   const ratingOptions = ["1", "2", "3", "4", "5"];
+
+  const terms = useMemo(() => {
+    if (!selectedSession) {
+      return [];
+    }
+    return termsCache[selectedSession] ?? [];
+  }, [selectedSession, termsCache]);
+
+  const resetSkillForm = useCallback(() => {
+    setSkillForm({
+      id: null,
+      skill_type_id: "",
+      rating_value: "3",
+    });
+  }, []);
+
+  const loadSkillRatings = useCallback(async () => {
+    if (!student?.id || !selectedSession || !selectedTerm) {
+      setSkillRatings([]);
+      return;
+    }
+    setSkillLoading(true);
+    setSkillError(null);
+    try {
+      const ratings = await listStudentSkillRatings(student.id, {
+        session_id: selectedSession,
+        term_id: selectedTerm,
+      });
+      setSkillRatings(ratings);
+    } catch (err) {
+      console.error("Unable to load skill ratings", err);
+      setSkillError(
+        err instanceof Error
+          ? err.message
+          : "Unable to load skill ratings.",
+      );
+      setSkillRatings([]);
+    } finally {
+      setSkillLoading(false);
+    }
+  }, [student?.id, selectedSession, selectedTerm]);
+
+  const loadTermSummary = useCallback(async () => {
+    if (!student?.id || !selectedSession || !selectedTerm) {
+      setTermSummary({
+        class_teacher_comment: "",
+        principal_comment: "",
+      });
+      return;
+    }
+    try {
+      const summary = await getStudentTermSummary(student.id, {
+        session_id: selectedSession,
+        term_id: selectedTerm,
+      });
+      setTermSummary({
+        class_teacher_comment: summary.class_teacher_comment ?? "",
+        principal_comment: summary.principal_comment ?? "",
+      });
+      setTermSummaryFeedback(null);
+      setTermSummaryFeedbackType("success");
+    } catch (err) {
+      console.error("Unable to load term comments", err);
+      setTermSummary({
+        class_teacher_comment: "",
+        principal_comment: "",
+      });
+      setTermSummaryFeedback(
+        err instanceof Error
+          ? err.message
+          : "Unable to load term comments for the selected session and term.",
+      );
+      setTermSummaryFeedbackType("warning");
+    }
+  }, [student?.id, selectedSession, selectedTerm]);
+
+  const loadResultPins = useCallback(async () => {
+    if (!student?.id || !selectedSession || !selectedTerm) {
+      setPins([]);
+      return;
+    }
+    setPinLoading(true);
+    setPinError(null);
+    try {
+      const result = await listStudentResultPins(student.id, {
+        session_id: selectedSession,
+        term_id: selectedTerm,
+      });
+      setPins(result);
+    } catch (err) {
+      console.error("Unable to load result PINs", err);
+      setPinError(
+        err instanceof Error
+          ? err.message
+          : "Unable to load result PINs for the selected term.",
+      );
+      setPins([]);
+    } finally {
+      setPinLoading(false);
+    }
+  }, [student?.id, selectedSession, selectedTerm]);
+
+  useEffect(() => {
+    void loadSkillRatings();
+  }, [loadSkillRatings]);
+
+  useEffect(() => {
+    void loadTermSummary();
+  }, [loadTermSummary]);
+
+  useEffect(() => {
+    void loadResultPins();
+  }, [loadResultPins]);
+
+  const handleSessionChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const newSession = event.target.value;
+    setSelectedSession(newSession);
+    setSelectedTerm("");
+  };
+
+  const handleTermChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    setSelectedTerm(event.target.value);
+  };
+
+  const handleSkillTypeChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const value = event.target.value;
+    setSkillForm((prev) => ({
+      ...prev,
+      skill_type_id: value,
+    }));
+  };
+
+  const handleSkillRatingChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const value = event.target.value;
+    setSkillForm((prev) => ({
+      ...prev,
+      rating_value: value,
+    }));
+  };
+
+  const beginEditSkillRating = useCallback(
+    (rating: StudentSkillRating) => {
+      setSkillForm({
+        id: rating?.id != null ? String(rating.id) : null,
+        skill_type_id:
+          rating?.skill_type_id != null ? String(rating.skill_type_id) : "",
+        rating_value:
+          rating?.rating_value != null ? String(rating.rating_value) : "3",
+      });
+      setSkillFeedback(null);
+      setSkillError(null);
+    },
+    [],
+  );
+
+  const handleCancelSkillEdit = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    resetSkillForm();
+  };
+
+  const handleDeleteSkillRating = useCallback(
+    async (rating: StudentSkillRating) => {
+      if (!student?.id || rating?.id == null) {
+        return;
+      }
+      if (
+        !window.confirm(
+          "Delete this skill rating? This action cannot be undone.",
+        )
+      ) {
+        return;
+      }
+      setSkillError(null);
+      setSkillFeedback(null);
+      try {
+        await deleteStudentSkillRating(student.id, rating.id);
+        if (skillForm.id && String(rating.id) === skillForm.id) {
+          resetSkillForm();
+        }
+        setSkillFeedback("Skill rating deleted.");
+        setSkillFeedbackType("success");
+        await loadSkillRatings();
+      } catch (err) {
+        console.error("Unable to delete skill rating", err);
+        setSkillError(
+          err instanceof Error
+            ? err.message
+            : "Unable to delete skill rating.",
+        );
+      }
+    },
+    [student?.id, skillForm.id, loadSkillRatings, resetSkillForm],
+  );
+
+  const handleSkillFormSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!student?.id) {
+      return;
+    }
+    if (!selectedSession || !selectedTerm) {
+      setSkillFeedback("Select a session and term before saving a rating.");
+      setSkillFeedbackType("warning");
+      return;
+    }
+    if (!skillForm.skill_type_id || !skillForm.rating_value) {
+      setSkillError("Skill and rating are required.");
+      return;
+    }
+
+    const ratingValue = Number(skillForm.rating_value);
+    if (!Number.isFinite(ratingValue) || ratingValue < 1 || ratingValue > 5) {
+      setSkillError("Select a valid rating between 1 and 5.");
+      return;
+    }
+
+    setSkillSubmitting(true);
+    setSkillError(null);
+    try {
+      const payload = {
+        session_id: selectedSession,
+        term_id: selectedTerm,
+        skill_type_id: skillForm.skill_type_id,
+        rating_value: ratingValue,
+      };
+      if (skillForm.id) {
+        await updateStudentSkillRating(student.id, skillForm.id, payload);
+        setSkillFeedback("Skill rating updated successfully.");
+      } else {
+        await createStudentSkillRating(student.id, payload);
+        setSkillFeedback("Skill rating saved successfully.");
+      }
+      setSkillFeedbackType("success");
+      resetSkillForm();
+      await loadSkillRatings();
+    } catch (err) {
+      console.error("Unable to save skill rating", err);
+      setSkillError(
+        err instanceof Error
+          ? err.message
+          : "Unable to save skill rating at this time.",
+      );
+    } finally {
+      setSkillSubmitting(false);
+    }
+  };
+
+  const handleTermSummaryChange = (
+    field: "class_teacher_comment" | "principal_comment",
+    value: string,
+  ) => {
+    setTermSummary((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleTermSummarySubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!student?.id) {
+      return;
+    }
+    if (!selectedSession || !selectedTerm) {
+      setTermSummaryFeedback(
+        "Select a session and term before saving comments.",
+      );
+      setTermSummaryFeedbackType("warning");
+      return;
+    }
+    setTermSummarySaving(true);
+    setTermSummaryFeedback(null);
+    try {
+      const payload = {
+        session_id: selectedSession,
+        term_id: selectedTerm,
+        class_teacher_comment:
+          termSummary.class_teacher_comment?.trim() || null,
+        principal_comment: termSummary.principal_comment?.trim() || null,
+      };
+      const updated = await updateStudentTermSummary(student.id, payload);
+      setTermSummary({
+        class_teacher_comment: updated.class_teacher_comment ?? "",
+        principal_comment: updated.principal_comment ?? "",
+      });
+      setTermSummaryFeedback("Comments saved successfully.");
+      setTermSummaryFeedbackType("success");
+    } catch (err) {
+      console.error("Unable to save term comments", err);
+      setTermSummaryFeedback(
+        err instanceof Error
+          ? err.message
+          : "Unable to save comments for the selected session and term.",
+      );
+      setTermSummaryFeedbackType("danger");
+    } finally {
+      setTermSummarySaving(false);
+    }
+  };
+
+  const handleGeneratePin = async (regenerate: boolean) => {
+    if (!student?.id) {
+      return;
+    }
+    if (!selectedSession || !selectedTerm) {
+      setPinFeedback("Select the session and term before generating a PIN.");
+      setPinFeedbackType("warning");
+      return;
+    }
+    setPinProcessing(true);
+    setPinFeedback(null);
+    setPinError(null);
+    try {
+      await generateResultPinForStudent(student.id, {
+        session_id: selectedSession,
+        term_id: selectedTerm,
+        regenerate,
+      });
+      setPinFeedback(
+        regenerate
+          ? "Result PIN regenerated successfully."
+          : "Result PIN generated successfully.",
+      );
+      setPinFeedbackType("success");
+      await loadResultPins();
+    } catch (err) {
+      console.error("Unable to generate result PIN", err);
+      setPinError(
+        err instanceof Error
+          ? err.message
+          : "Unable to generate result PIN at this time.",
+      );
+    } finally {
+      setPinProcessing(false);
+    }
+  };
+
+  const handleInvalidatePin = async (pinId: string | number) => {
+    if (!pinId) {
+      return;
+    }
+    if (!window.confirm("Invalidate this result PIN?")) {
+      return;
+    }
+    setPinProcessing(true);
+    setPinError(null);
+    setPinFeedback(null);
+    try {
+      await invalidateResultPin(pinId);
+      setPinFeedback("Result PIN invalidated.");
+      setPinFeedbackType("success");
+      await loadResultPins();
+    } catch (err) {
+      console.error("Unable to invalidate result PIN", err);
+      setPinError(
+        err instanceof Error
+          ? err.message
+          : "Unable to invalidate result PIN at this time.",
+      );
+    } finally {
+      setPinProcessing(false);
+    }
+  };
+
+  const handleShowPin = (pinCode?: string | null) => {
+    if (!pinCode) {
+      window.alert("PIN not available.");
+      return;
+    }
+    window.alert(`Result PIN: ${pinCode}`);
+  };
+
+  const buildPrintParams = useCallback(() => {
+    const params = new URLSearchParams();
+    if (!studentId) {
+      return params;
+    }
+    params.set("student_id", studentId);
+    const sessionCandidate =
+      selectedSession ||
+      (student?.current_session_id != null
+        ? String(student.current_session_id)
+        : "");
+    const termCandidate =
+      selectedTerm ||
+      (student?.current_term_id != null
+        ? String(student.current_term_id)
+        : "");
+    if (sessionCandidate) {
+      params.set("session_id", sessionCandidate);
+    }
+    if (termCandidate) {
+      params.set("term_id", termCandidate);
+    }
+    return params;
+  }, [
+    selectedSession,
+    selectedTerm,
+    student?.current_session_id,
+    student?.current_term_id,
+    studentId,
+  ]);
+
+  const handlePrintResult = useCallback(async () => {
+    if (!studentId) {
+      return;
+    }
+    const params = buildPrintParams();
+    const endpoint = `${resolveBackendUrl(
+      `/api/v1/students/${studentId}/results/print`,
+    )}?${params.toString()}`;
+    const token = getCookie("token");
+    if (!token) {
+      window.alert(
+        "Your session token is missing. Please log in again before printing the result.",
+      );
+      return;
+    }
+
+    setPrintProcessing(true);
+    try {
+      const response = await fetch(endpoint, {
+        headers: {
+          Accept: "text/html",
+          "X-Requested-With": "XMLHttpRequest",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const message = await response
+          .text()
+          .catch(() => response.statusText || "Unable to load printable result.");
+        const normalized =
+          message && message.trim().length > 0
+            ? message.trim()
+            : `Unable to load printable result (${response.status}).`;
+        console.error("Printable result request failed", {
+          endpoint,
+          status: response.status,
+          message: normalized,
+        });
+        throw new Error(normalized);
+      }
+
+      const html = await response.text();
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) {
+        window.alert(
+          "Unable to open result window. Please allow pop-ups for this site.",
+        );
+        return;
+      }
+      printWindow.document.open();
+      printWindow.document.write(html);
+      printWindow.document.close();
+    } catch (error) {
+      console.error("Unable to load printable result", error);
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : "Unable to load printable result.",
+      );
+    } finally {
+      setPrintProcessing(false);
+    }
+  }, [buildPrintParams, studentId]);
+
+  const formatDate = (value?: string | null) => {
+    if (!value) {
+      return "—";
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+    return date.toLocaleDateString();
+  };
+
+  const formatDateTime = (value?: string | null) => {
+    if (!value) {
+      return "—";
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+    return date.toLocaleString();
+  };
+
+  const maskPin = (pin?: string | null) => {
+    if (!pin || pin.length < 4) {
+      return "********";
+    }
+    return `${pin.slice(0, 2)}****${pin.slice(-2)}`;
+  };
+
+  const pinStatusClass = (status?: string | null) => {
+    const normalized = (status ?? "").toLowerCase();
+    if (normalized === "active") {
+      return "badge badge-success";
+    }
+    if (normalized === "revoked") {
+      return "badge badge-danger";
+    }
+    if (normalized === "expired") {
+      return "badge badge-warning";
+    }
+    return "badge badge-secondary";
+  };
 
   useEffect(() => {
     if (!studentId) {
@@ -174,85 +696,21 @@ export default function StudentDetailsPage() {
   }, [selectedSession, selectedTerm, termsCache]);
 
   useEffect(() => {
-    if (!student?.id || !selectedSession || !selectedTerm) {
-      setSkillRatings([]);
-      return;
-    }
-    setSkillLoading(true);
+    setSkillFeedback(null);
     setSkillError(null);
-    listStudentSkillRatings(student.id, {
-      session_id: selectedSession,
-      term_id: selectedTerm,
-    })
-      .then((ratings) => {
-        setSkillRatings(ratings);
-        setSkillFeedback(null);
-      })
-      .catch((err) => {
-        console.error("Unable to load skill ratings", err);
-        setSkillError(
-          err instanceof Error
-            ? err.message
-            : "Unable to load skill ratings.",
-        );
-        setSkillRatings([]);
-      })
-      .finally(() => setSkillLoading(false));
-  }, [student?.id, selectedSession, selectedTerm]);
+    resetSkillForm();
+  }, [selectedSession, selectedTerm, resetSkillForm]);
 
   useEffect(() => {
-    if (!student?.id || !selectedSession || !selectedTerm) {
-      setTermSummary({
-        class_teacher_comment: "",
-        principal_comment: "",
-      });
-      return;
-    }
-    getStudentTermSummary(student.id, {
-      session_id: selectedSession,
-      term_id: selectedTerm,
-    })
-      .then((summary: StudentTermSummary) => {
-        setTermSummary({
-          class_teacher_comment: summary.class_teacher_comment ?? "",
-          principal_comment: summary.principal_comment ?? "",
-        });
-      })
-      .catch((err: unknown) => {
-        console.error("Unable to load term comments", err);
-        setTermSummary({
-          class_teacher_comment: "",
-          principal_comment: "",
-        });
-      });
-  }, [student?.id, selectedSession, selectedTerm]);
+    setTermSummaryFeedback(null);
+    setTermSummaryFeedbackType("success");
+  }, [selectedSession, selectedTerm]);
 
   useEffect(() => {
-    if (!student?.id || !selectedSession || !selectedTerm) {
-      setPins([]);
-      return;
-    }
-    setPinLoading(true);
+    setPinFeedback(null);
     setPinError(null);
-    listStudentResultPins(student.id, {
-      session_id: selectedSession,
-      term_id: selectedTerm,
-    })
-      .then((result) => {
-        setPins(result);
-        setPinFeedback(null);
-      })
-      .catch((err: unknown) => {
-        console.error("Unable to load result PINs", err);
-        setPinError(
-          err instanceof Error
-            ? err.message
-            : "Unable to load result PINs for the selected term.",
-        );
-        setPins([]);
-      })
-      .finally(() => setPinLoading(false));
-  }, [student?.id, selectedSession, selectedTerm]);
+    setPinFeedbackType("success");
+  }, [selectedSession, selectedTerm]);
 
   const fullName = useMemo(() => {
     if (!student) return "";
@@ -292,19 +750,6 @@ export default function StudentDetailsPage() {
       setRemoving(false);
     }
   };
-
-  const printResultUrl = useMemo(() => {
-    if (!studentId) return "#";
-    const params = new URLSearchParams();
-    params.set("student_id", studentId);
-    if (student?.current_session_id) {
-      params.set("session_id", `${student.current_session_id}`);
-    }
-    if (student?.current_term_id) {
-      params.set("term_id", `${student.current_term_id}`);
-    }
-    return `${resolveBackendUrl(`/api/v1/students/${studentId}/results/print`)}?${params.toString()}`;
-  }, [studentId, student?.current_session_id, student?.current_term_id]);
 
   if (!studentId) {
     return null;
@@ -394,14 +839,14 @@ export default function StudentDetailsPage() {
               >
                 Edit
               </Link>
-              <a
-                href={printResultUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
                 className="btn btn-outline-secondary"
+                onClick={handlePrintResult}
+                disabled={printProcessing}
               >
-                Print Result
-              </a>
+                {printProcessing ? "Loading…" : "Print Result"}
+              </button>
               <button
                 type="button"
                 className="btn btn-outline-danger"
@@ -498,6 +943,351 @@ export default function StudentDetailsPage() {
                 </ul>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="card height-auto mt-4">
+        <div className="card-body">
+          <div className="heading-layout1">
+            <div className="item-title">
+              <h3>Skills &amp; Behaviour Tracker</h3>
+              <p className="mb-0 text-muted small">
+                Select a session and term to manage this student&rsquo;s soft-skill ratings.
+              </p>
+            </div>
+          </div>
+          <form className="mb-3" onSubmit={handleSkillFormSubmit}>
+            <div className="row">
+              <div className="col-xl-3 col-lg-6 col-12 form-group">
+                <label>Session</label>
+                <select
+                  className="form-control"
+                  value={selectedSession}
+                  onChange={handleSessionChange}
+                >
+                  <option value="">Select session</option>
+                  {sessions.map((session) => (
+                    <option key={session.id} value={session.id}>
+                      {session.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-xl-3 col-lg-6 col-12 form-group">
+                <label>Term</label>
+                <select
+                  className="form-control"
+                  value={selectedTerm}
+                  onChange={handleTermChange}
+                  disabled={!selectedSession}
+                >
+                  <option value="">Select term</option>
+                  {terms.map((term) => (
+                    <option key={term.id} value={term.id}>
+                      {term.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-xl-3 col-lg-6 col-12 form-group">
+                <label>Skill</label>
+                <select
+                  className="form-control"
+                  value={skillForm.skill_type_id}
+                  onChange={handleSkillTypeChange}
+                  disabled={!selectedSession || !selectedTerm}
+                  required
+                >
+                  <option value="">Select skill</option>
+                  {skillTypes.map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {type.category ? `${type.category} - ${type.name}` : type.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-xl-3 col-lg-6 col-12 form-group">
+                <label>Rating (1 - 5)</label>
+                <select
+                  className="form-control"
+                  value={skillForm.rating_value}
+                  onChange={handleSkillRatingChange}
+                  disabled={!selectedSession || !selectedTerm}
+                  required
+                >
+                  <option value="">Select rating</option>
+                  {ratingOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="d-flex align-items-center">
+              <button
+                type="submit"
+                className="btn-fill-lg btn-gradient-yellow btn-hover-bluedark"
+                disabled={skillSubmitting || !selectedSession || !selectedTerm}
+              >
+                {skillForm.id ? "Update Skill Rating" : "Save Skill Rating"}
+              </button>
+              {skillForm.id ? (
+                <button
+                  type="button"
+                  className="btn-fill-lg btn-light ml-3"
+                  onClick={handleCancelSkillEdit}
+                  disabled={skillSubmitting}
+                >
+                  Cancel
+                </button>
+              ) : null}
+            </div>
+          </form>
+          {skillFeedback ? (
+            <div className={`alert alert-${skillFeedbackType}`} role="alert">
+              {skillFeedback}
+            </div>
+          ) : null}
+          {skillError ? (
+            <div className="alert alert-danger" role="alert">
+              {skillError}
+            </div>
+          ) : null}
+          <div className="table-responsive">
+            <table className="table display text-nowrap">
+              <thead>
+                <tr>
+                  <th>Skill</th>
+                  <th>Rating</th>
+                  <th>Updated</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {skillLoading ? (
+                  <tr>
+                    <td colSpan={4}>Loading skill ratings…</td>
+                  </tr>
+                ) : skillRatings.length === 0 ? (
+                  <tr>
+                    <td colSpan={4}>
+                      {selectedSession && selectedTerm
+                        ? "No skill ratings recorded for this term."
+                        : "Select a session and term to view recorded skill ratings."}
+                    </td>
+                  </tr>
+                ) : (
+                  skillRatings.map((rating) => (
+                    <tr key={String(rating.id ?? rating.skill_type_id)}>
+                      <td>
+                        {rating.skill_type?.name ??
+                          rating.skill_type_id ??
+                          "—"}
+                      </td>
+                      <td>{rating.rating_value ?? "—"}</td>
+                      <td>{formatDateTime(rating.updated_at)}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="btn btn-link p-0 mr-3"
+                          onClick={() => beginEditSkillRating(rating)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-link text-danger p-0"
+                          onClick={() => {
+                            void handleDeleteSkillRating(rating);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div className="card height-auto mt-4">
+        <div className="card-body">
+          <div className="heading-layout1">
+            <div className="item-title">
+              <h3>Term Comments</h3>
+              <p className="mb-0 text-muted small">
+                Applies to the selected session and term above.
+              </p>
+            </div>
+          </div>
+          <form className="mb-3" onSubmit={handleTermSummarySubmit}>
+            <div className="row">
+              <div className="col-md-6 col-12 form-group">
+                <label className="text-dark-medium">Class Teacher Comment</label>
+                <textarea
+                  className="form-control"
+                  rows={4}
+                  maxLength={2000}
+                  value={termSummary.class_teacher_comment ?? ""}
+                  onChange={(event) =>
+                    handleTermSummaryChange(
+                      "class_teacher_comment",
+                      event.target.value,
+                    )
+                  }
+                  disabled={!selectedSession || !selectedTerm}
+                />
+              </div>
+              <div className="col-md-6 col-12 form-group">
+                <label className="text-dark-medium">Principal Comment</label>
+                <textarea
+                  className="form-control"
+                  rows={4}
+                  maxLength={2000}
+                  value={termSummary.principal_comment ?? ""}
+                  onChange={(event) =>
+                    handleTermSummaryChange(
+                      "principal_comment",
+                      event.target.value,
+                    )
+                  }
+                  disabled={!selectedSession || !selectedTerm}
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              className="btn-fill-lg btn-gradient-yellow btn-hover-bluedark"
+              disabled={termSummarySaving || !selectedSession || !selectedTerm}
+            >
+              {termSummarySaving ? "Saving…" : "Save Comments"}
+            </button>
+          </form>
+          {termSummaryFeedback ? (
+            <div
+              className={`alert alert-${termSummaryFeedbackType}`}
+              role="alert"
+            >
+              {termSummaryFeedback}
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="card height-auto mt-4">
+        <div className="card-body">
+          <div className="heading-layout1">
+            <div className="item-title">
+              <h3>Result PIN</h3>
+              <p className="mb-0 text-muted small">
+                Linked to the selected session and term.
+              </p>
+            </div>
+          </div>
+          {pinFeedback ? (
+            <div className={`alert alert-${pinFeedbackType}`} role="alert">
+              {pinFeedback}
+            </div>
+          ) : null}
+          {pinError ? (
+            <div className="alert alert-danger" role="alert">
+              {pinError}
+            </div>
+          ) : null}
+          <div className="mb-3">
+            <button
+              type="button"
+              className="btn-fill-lg btn-gradient-yellow btn-hover-bluedark mr-3"
+              onClick={() => {
+                void handleGeneratePin(false);
+              }}
+              disabled={pinProcessing || !selectedSession || !selectedTerm}
+            >
+              Generate PIN
+            </button>
+            <button
+              type="button"
+              className="btn-fill-lg btn-outline-secondary"
+              onClick={() => {
+                void handleGeneratePin(true);
+              }}
+              disabled={pinProcessing || !selectedSession || !selectedTerm}
+            >
+              Regenerate PIN
+            </button>
+          </div>
+          <div className="table-responsive">
+            <table className="table display text-nowrap">
+              <thead>
+                <tr>
+                  <th>Session</th>
+                  <th>Term</th>
+                  <th>PIN</th>
+                  <th>Status</th>
+                  <th>Expires</th>
+                  <th>Updated</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pinLoading ? (
+                  <tr>
+                    <td colSpan={7}>Loading result PINs…</td>
+                  </tr>
+                ) : pins.length === 0 ? (
+                  <tr>
+                    <td colSpan={7}>
+                      {selectedSession && selectedTerm
+                        ? "No result PIN generated for this term."
+                        : "Select a session and term to view the PIN."}
+                    </td>
+                  </tr>
+                ) : (
+                  pins.map((pin) => (
+                    <tr key={String(pin.id)}>
+                      <td>{pin.session?.name ?? "—"}</td>
+                      <td>{pin.term?.name ?? "—"}</td>
+                      <td>
+                        <code>{maskPin(pin.pin_code)}</code>
+                      </td>
+                      <td>
+                        <span className={pinStatusClass(pin.status)}>
+                          {(pin.status ?? "unknown").toLowerCase()}
+                        </span>
+                      </td>
+                      <td>{formatDate(pin.expires_at)}</td>
+                      <td>{formatDateTime(pin.updated_at)}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="btn btn-link p-0 mr-3"
+                          onClick={() => handleShowPin(pin.pin_code)}
+                        >
+                          Show
+                        </button>
+                        {pin.status === "active" ? (
+                          <button
+                            type="button"
+                            className="btn btn-link text-danger p-0"
+                            onClick={() => {
+                              void handleInvalidatePin(pin.id);
+                            }}
+                            disabled={pinProcessing}
+                          >
+                            Invalidate
+                          </button>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

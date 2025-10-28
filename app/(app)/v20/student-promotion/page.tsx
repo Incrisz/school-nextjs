@@ -79,7 +79,6 @@ export default function StudentPromotionPage() {
 
   useEffect(() => {
     if (!filters.session_id) {
-      setTermsCache((prev) => ({ ...prev, default: prev.default ?? [] }));
       return;
     }
     if (termsCache[filters.session_id]) {
