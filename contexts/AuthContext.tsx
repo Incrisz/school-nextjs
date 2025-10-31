@@ -62,6 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("Failed to hydrate auth context", error);
       setUser(null);
       setSchoolContext(createEmptySchoolContext());
+      deleteCookie("token");
     } finally {
       setLoading(false);
     }

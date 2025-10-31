@@ -568,7 +568,11 @@ export default function StudentDetailsPage() {
     if (Number.isNaN(date.getTime())) {
       return value;
     }
-    return date.toLocaleDateString();
+    return new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(date);
   };
 
   const formatDateTime = (value?: string | null) => {
@@ -868,7 +872,7 @@ export default function StudentDetailsPage() {
                   </li>
                   <li>
                     <strong>Date of Birth:</strong>{" "}
-                    {student.date_of_birth ?? "N/A"}
+                    {formatDate(student.date_of_birth)}
                   </li>
                   <li>
                     <strong>Nationality:</strong>{" "}
@@ -915,7 +919,7 @@ export default function StudentDetailsPage() {
                 <ul className="list-unstyled">
                   <li>
                     <strong>Admission Date:</strong>{" "}
-                    {student.admission_date ?? "N/A"}
+                    {formatDate(student.admission_date)}
                   </li>
                   <li>
                     <strong>Current Session:</strong>{" "}

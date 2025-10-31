@@ -3,12 +3,11 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { getCookie } from "@/lib/cookies";
 
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, loading } = useAuth();
+  const { login, loading, user } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -38,15 +37,14 @@ export function LoginForm() {
     }
   };
 
+  const nextPath = searchParams?.get("next") || "/v10/dashboard";
+
   useEffect(() => {
-    if (loading) {
+    if (loading || !user) {
       return;
     }
-    const token = typeof window !== "undefined" ? getCookie("token") : null;
-    if (token) {
-      router.replace("/v10/dashboard");
-    }
-  }, [loading, router]);
+    router.replace(nextPath);
+  }, [loading, user, router, nextPath]);
 
   return (
     <form id="login-form" className="login-form" onSubmit={handleSubmit}>

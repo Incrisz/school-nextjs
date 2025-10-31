@@ -176,7 +176,7 @@ export default function AssessmentComponentsPage() {
     if (Number.isNaN(weightValue)) {
       setFormFeedback({
         type: "warning",
-        message: "Weight must be a valid number.",
+        message: "Score must be a valid number.",
       });
       return;
     }
@@ -541,7 +541,7 @@ export default function AssessmentComponentsPage() {
                 />
               </div>
               <div className="col-lg-4 col-md-6 col-12 form-group">
-                <label>Weight *</label>
+                <label>Score *</label>
                 <input
                   type="number"
                   className="form-control"
@@ -720,7 +720,7 @@ export default function AssessmentComponentsPage() {
               <thead>
                 <tr>
                   <th>Name</th>
-                  <th>Weight</th>
+                  <th>Score</th>
                   <th>Order</th>
                   <th>Label</th>
                   <th>Subjects</th>
